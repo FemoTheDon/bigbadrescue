@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BigBadRescue by Breadbaskets</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <img class="logo" src="icon.svg" alt="" width="42" height="42">
+      <div>
+        <h1>BigBadRescue</h1>
+        <div class="by">by <b>Breadbaskets</b> <span class="ver" id="ver">v1.01</span></div>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" class="tab on" data-tab="find" id="tabFind">Find &amp; convert</button>
+      <button role="tab" class="tab" data-tab="review" id="tabReview">Review <span class="count" id="reviewCount" hidden>0</span></button>
+      <button role="tab" class="tab" data-tab="settings" id="tabSettings">Settings</button>
+    </nav>
+    <div class="conn" id="conn">
+      <span class="dot" id="connDot"></span>
+      <span id="connText">Not connected</span>
+      <button class="btn small primary" id="connectBtn">Connect Evernote</button>
+    </div>
+  </header>
+
+  <div class="banners">
+    <div class="banner info" id="demoBanner" hidden><b>Demo mode.</b> This is a pretend Evernote account with example notes. Nothing you do here touches your real notes.</div>
+    <div class="banner warn" id="ffWarn" hidden><b>ffmpeg isn't available, so nothing can be converted yet.</b> <span id="ffWarnMsg"></span></div>
+    <div class="banner info" id="signinBanner" hidden><b>Finish signing in to Evernote in your browser.</b> If no page opened, <a id="signinLink" href="#" target="_blank" rel="noopener">open the Evernote sign-in page</a>.</div>
+    <div class="banner err" id="connErr" hidden></div>
+    <div class="banner pause" id="pauseBanner" hidden>
+      <div><b>Paused: Evernote asked BigBadRescue to slow down.</b> Resuming in <b id="pauseLeft">…</b> (at <span id="pauseAt"></span>). Your queue is saved, so it's fine to quit and come back.</div>
+      <button class="btn small" id="resumeBtn">Try now</button>
+    </div>
+  </div>
+
+  <!-- Find & convert -->
+  <section class="page" id="pageFind">
+    <form class="filters card" id="filters" autocomplete="off">
+      <div class="f">
+        <label for="field" class="label">Date</label>
+        <select id="field"><option value="created">Created</option><option value="updated">Updated</option></select>
+      </div>
+      <div class="f">
+        <label for="from" class="label">From</label>
+        <input type="date" id="from">
+      </div>
+      <div class="f">
+        <label for="to" class="label">To</label>
+        <input type="date" id="to">
+      </div>
+      <div class="f">
+        <label for="notebook" class="label">Notebook</label>
+        <select id="notebook"><option value="">All notebooks</option></select>
+      </div>
+      <div class="f types">
+        <span class="label">Attachment types</span>
+        <div class="chips" id="formatChips"></div>
+      </div>
+      <div class="f actions">
+        <button type="submit" class="btn primary" id="searchBtn">Search</button>
+        <button type="button" class="btn" id="scanBtn" title="Count every kind of audio in this date range">Scan types</button>
+      </div>
+      <div class="scan" id="scanOut" hidden></div>
+    </form>
+
+    <div class="panes">
+      <div class="card list">
+        <div class="list-head">
+          <label class="check"><input type="checkbox" id="selAll"> <span id="listCount">Search to list notes</span></label>
+          <select id="show" class="small" title="Which notes to show">
+            <option value="all">All</option>
+            <option value="todo">Not converted</option>
+            <option value="converted">Converted</option>
+            <option value="problems">Problems</option>
+          </select>
+        </div>
+        <ul class="rows" id="rows" role="listbox" aria-label="Notes"></ul>
+        <div class="empty" id="listEmpty">
+          <p><b>Pick a date range and press Search.</b></p>
+          <p>BigBadRescue lists notes that have AMR, 3GPP or OGG recordings. Those formats don't play in Evernote's phone apps.</p>
+        </div>
+      </div>
+
+      <div class="card viewer" id="viewer">
+        <div class="empty" id="viewEmpty"><p>Click a note to see its text and recordings here.</p></div>
+        <div id="viewBody" hidden>
+          <div class="v-head">
+            <h2 id="vTitle"></h2>
+            <div class="v-meta" id="vMeta"></div>
+            <div class="v-tags" id="vTags"></div>
+          </div>
+          <div class="v-atts" id="vAtts"></div>
+          <pre class="v-text" id="vText"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Review -->
+  <section class="page" id="pageReview" hidden>
+    <div class="card review-intro">
+      <div>
+        <h2>Listen before you clean up</h2>
+        <p>Play each new MP3. When it sounds right, mark it. Only marked recordings can have their original removed from the note. A copy of every original stays in your backups folder either way.</p>
+      </div>
+      <div class="review-filter">
+        <select id="reviewShow">
+          <option value="waiting">Waiting for you</option>
+          <option value="reviewed">Sounds right</option>
+          <option value="cleaned">Cleaned up</option>
+          <option value="problems">Problems</option>
+          <option value="all">Everything</option>
+        </select>
+      </div>
+    </div>
+    <div class="card">
+      <div class="list-head">
+        <label class="check"><input type="checkbox" id="revSelAll"> <span id="revCount">Nothing here yet</span></label>
+        <div class="rev-bulk">
+          <button class="btn small" id="revGood" disabled>Sounds right</button>
+          <button class="btn small" id="revBad" disabled>Sounds wrong</button>
+        </div>
+      </div>
+      <ul class="rev-rows" id="revRows"></ul>
+      <div class="empty" id="revEmpty"><p>Nothing to review yet. Convert some notes first.</p></div>
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section class="page" id="pageSettings" hidden>
+    <div class="card settings">
+      <div class="set">
+        <div>
+          <div class="set-t">MP3 quality</div>
+          <div class="set-d">Old voice recordings are phone quality (8 kHz mono), so Voice loses nothing and uses half the upload allowance.</div>
+        </div>
+        <div class="seg" id="presetSeg">
+          <label><input type="radio" name="preset" value="Voice"> Voice · 64 kbps mono</label>
+          <label><input type="radio" name="preset" value="Music"> Music · 128 kbps stereo</label>
+        </div>
+      </div>
+      <div class="set">
+        <div>
+          <div class="set-t">Backups folder</div>
+          <div class="set-d">Every original is copied here before anything changes in Evernote, sorted by year and note.</div>
+        </div>
+        <div class="row-ctl">
+          <input id="backupDir" class="path" spellcheck="false">
+          <button class="btn small" id="pickBackup">Change…</button>
+          <button class="btn small" id="showBackup">Show</button>
+        </div>
+      </div>
+      <div class="set">
+        <div>
+          <div class="set-t">Pace</div>
+          <div class="set-d">Time between calls to Evernote. Slower is gentler on Evernote's limits. If Evernote asks for a pause anyway, BigBadRescue waits and carries on.</div>
+        </div>
+        <div class="row-ctl">
+          <input type="range" id="interval" min="500" max="6000" step="250">
+          <span class="mono" id="intervalOut"></span>
+        </div>
+      </div>
+      <div class="set">
+        <div>
+          <div class="set-t">Tag notes in Evernote</div>
+          <div class="set-d">Adds “BigBadRescue: converted” and “BigBadRescue: cleaned”, so you can search for them in Evernote.</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="tagNotes"><span></span></label>
+      </div>
+      <div class="set">
+        <div>
+          <div class="set-t">Trust the automatic check</div>
+          <div class="set-d">Skips the Review step: an MP3 that passed the automatic check counts as reviewed. Turn this on only after you've listened to a few.</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="trustAuto"><span></span></label>
+      </div>
+      <details class="set adv">
+        <summary>If sign-in fails</summary>
+        <p class="set-d">BigBadRescue registers itself with Evernote when you first connect. If Evernote refuses that, you can enter a client ID that Evernote has issued, or the address of a client metadata document. Leave both empty normally.</p>
+        <div class="row-ctl">
+          <input id="clientId" class="path" placeholder="Client ID (optional)" spellcheck="false">
+          <input id="clientMeta" class="path" placeholder="https://… client metadata URL (optional)" spellcheck="false">
+        </div>
+        <p class="set-d">Changes here take effect the next time BigBadRescue opens.</p>
+      </details>
+      <div class="set">
+        <div>
+          <div class="set-t">Evernote account</div>
+          <div class="set-d" id="acctLine">Not connected.</div>
+        </div>
+        <button class="btn small" id="signOut">Sign out</button>
+      </div>
+      <div class="set foot">
+        <span class="set-d" id="ffLine"></span>
+        <button class="btn small" id="quitBtn">Quit BigBadRescue</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="bar card" id="bar">
+    <div class="bar-left">
+      <span id="selInfo">No notes selected</span>
+      <button class="btn primary" id="convertBtn" disabled>Convert selected</button>
+      <button class="btn" id="cleanupBtn" disabled title="Remove originals whose MP3 you've marked as sounding right">Remove originals…</button>
+      <button class="btn danger" id="confirmCleanup" hidden>Yes, remove <span id="cleanN"></span></button>
+    </div>
+    <div class="job" id="job" hidden>
+      <div class="job-t"><b id="jobTitle"></b> <span id="jobStep"></span></div>
+      <div class="track"><div class="fill" id="jobFill"></div></div>
+      <div class="job-q" id="jobQueue"></div>
+    </div>
+    <div class="bar-right">
+      <button class="btn small" id="stopBtn" hidden>Stop</button>
+      <span class="meter" id="meter" title="Calls to Evernote in the last hour">Pace: steady</span>
+    </div>
+  </footer>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

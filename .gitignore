@@ -1,0 +1,4 @@
+dist/
+*.zip
+/bigbadrescue
+.DS_Store
